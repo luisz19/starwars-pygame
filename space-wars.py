@@ -53,6 +53,13 @@ SPAWN_ENEMY = pygame.USEREVENT + 1
 pygame.time.set_timer(SPAWN_ENEMY, 3000)
 
 score = 0
+round_number = 1
+enemies_to_spawn = 5
+enemies_spawned = 0
+enemies_killed = 0
+enemy_base_hp = 1
+is_transitioning = False
+transition_end_time = 0
 score_surf = text_font.render(f'Score: {score}', False, text_color)
 score_rect = score_surf.get_rect(center = (150,  50))
 
@@ -78,6 +85,7 @@ def random_pos():
     return (random.randint(0,SCREEN_X),random.randint(0,SCREEN_Y))
 
 def spawn_enemies():
+    global enemies_spawned
     border = random.randint(0, 3)
 
     if border == 0: x, y = random.randint(0, SCREEN_X), -50
@@ -85,11 +93,12 @@ def spawn_enemies():
     elif border == 2: x, y = -50, random.randint(0, SCREEN_Y)
     else: x, y = SCREEN_X + 50, random.randint(0, SCREEN_Y)
 
-    new_enemy = Enemy(spaceship, enemy_bullets_group, shoot_song)
+    new_enemy = Enemy(spaceship, enemy_bullets_group, shoot_song, enemy_base_hp)
     new_enemy.pos = pygame.Vector2(x, y)
     new_enemy.rect.center = new_enemy.pos
 
     enemies_group.add(new_enemy)
+    enemies_spawned += 1
 
 while True:
     SCREEN_X, SCREEN_Y = pygame.display.get_surface().get_size()
@@ -110,6 +119,13 @@ while True:
             if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
                 if not spaceship.alive(): all_sprites.add(spaceship) # reset player when inicialize
                 actual_state = GAME
+                round_number = 1
+                enemies_to_spawn = 5
+                enemies_spawned = 0
+                enemies_killed = 0
+                enemy_base_hp = 1
+                is_transitioning = True
+                transition_end_time = pygame.time.get_ticks() + random.randint(5000, 10000)
         elif actual_state == GAME:
             if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
                 new_shoot = Bullet(spaceship.rect.centerx, spaceship.rect.centery, spaceship.angle) 
@@ -125,8 +141,9 @@ while True:
                 spaceship.vel.y += math.sin(rad) * force_recoil
             
             if event.type == SPAWN_ENEMY:
-                spawn_enemies()
-                print('novo inimigo')
+                if not is_transitioning and enemies_spawned < enemies_to_spawn:
+                    spawn_enemies()
+                    print('novo inimigo')
         elif actual_state == GAME_OVER:
             if event.type == pygame.KEYDOWN:
                 spaceship = Spaceship()
@@ -136,6 +153,13 @@ while True:
                 bullets_group.empty()
                 enemy_bullets_group.empty()
                 score = 0
+                round_number = 1
+                enemies_to_spawn = 5
+                enemies_spawned = 0
+                enemies_killed = 0
+                enemy_base_hp = 1
+                is_transitioning = True
+                transition_end_time = pygame.time.get_ticks() + random.randint(5000, 10000)
                 score_surf = text_font.render(f'Score: {score}', False, text_color)
                 actual_state = MENU
 
@@ -155,14 +179,27 @@ while True:
         if hits:
             for enemy_hited, bullets in hits.items():
                 enemy_hited.life -= len(bullets)
-                if enemy_hited.life == 0:
+                if enemy_hited.life <= 0:
                     score += len(bullets)
+                    enemies_killed += 1
                 print('veio auqi')
                 
                 score_surf = text_font.render(f'Score: {score}', False, text_color)
 
             if spaceship.life <= 0:
                 actual_state = GAME_OVER
+
+        if not is_transitioning and enemies_killed >= enemies_to_spawn:
+            round_number += 1
+            enemies_to_spawn += 2
+            enemy_base_hp += 1
+            is_transitioning = True
+            transition_end_time = pygame.time.get_ticks() + random.randint(5000, 10000)
+            
+        if is_transitioning and pygame.time.get_ticks() >= transition_end_time:
+            is_transitioning = False
+            enemies_spawned = 0
+            enemies_killed = 0
 
     SURFACE.fill(WHITE) # BACKGROUND
     SURFACE.blit(bg_image, (scroll_x, scroll_y))
@@ -177,6 +214,16 @@ while True:
 
         SURFACE.blit(score_surf, score_rect)
         SURFACE.blit(life_surf, life_rect)
+
+        enemies_left = enemies_to_spawn - enemies_killed
+        round_counter_surf = text_font.render(f'Left: {enemies_left}', False, text_color)
+        round_counter_rect = round_counter_surf.get_rect(center = (SCREEN_X - 150,  50))
+        SURFACE.blit(round_counter_surf, round_counter_rect)
+
+        if is_transitioning:
+            transition_surf = text_font.render(f'ROUND {round_number}', False, text_color)
+            transition_rect = transition_surf.get_rect(center = (SCREEN_X // 2, SCREEN_Y // 2))
+            SURFACE.blit(transition_surf, transition_rect)
 
         if spaceship.life <= 0:
             actual_state = GAME_OVER

@@ -5,12 +5,13 @@ from bullet import Bullet
 
 class Enemy(pygame.sprite.Sprite):
 
-    def __init__(self, target, enemy_bullets_group, shoot_song):
+    def __init__(self, target, enemy_bullets_group, shoot_song, hp=1):
         super().__init__()
 
         self.target = target
         self.enemy_bullets_group = enemy_bullets_group
         self.shoot_song = shoot_song
+        self.life = hp
         
         self.image_orig = pygame.image.load('destroyer.png').convert_alpha()
         self.image_orig = pygame.transform.scale(self.image_orig, (80, 100))
@@ -28,7 +29,6 @@ class Enemy(pygame.sprite.Sprite):
 
         self.pos = pygame.Vector2(self.rect.center)
         self.speed = 0.6
-        self.life = 1
 
     def shoot(self):
         now = pygame.time.get_ticks()
