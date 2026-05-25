@@ -36,7 +36,6 @@ GAME_OVER = 'game_over'
 
 actual_state = MENU
 
-rect1 = pygame.Rect(350, 350, 100, 100)
 
 bg_image = pygame.image.load("space.jpg").convert()
 scroll_x = 0
@@ -61,7 +60,9 @@ menu_rect = menu_surf.get_rect(center = (0, 0))
 gameover_surf = text_font.render('WASTED', False, text_color)
 gameover_rect = gameover_surf.get_rect(center = (0, 0))
 
-
+pygame.mixer.init()
+shoot_song = pygame.mixer.Sound('droid-blaster.mp3')
+shoot_song.set_volume(0.4)
 
 class Spaceship(pygame.sprite.Sprite):
     def __init__(self):
@@ -78,8 +79,7 @@ class Spaceship(pygame.sprite.Sprite):
         self.aceleration = 0.4
         self.friction = 0.96
         self.angle = 0
-        self.life = 5
-
+        self.life = 10
         
 
     def update(self):
@@ -149,13 +149,13 @@ class Enemy(pygame.sprite.Sprite):
         self.rect = self.image.get_rect(center=(SCREEN_X // 2, SCREEN_Y // 2))
 
         self.last_shoot = pygame.time.get_ticks()
-        self.shoot_interval = 1000
+        self.shoot_interval = random.randint(500 ,2000)
 
         self.angle = 0
 
         self.pos = pygame.Vector2(self.rect.center)
         self.speed = 0.6
-        self.life = 2
+        self.life = 1
 
     def shoot(self):
         now = pygame.time.get_ticks()
@@ -163,6 +163,8 @@ class Enemy(pygame.sprite.Sprite):
             self.last_shoot = now
             new_shoot = Bullet(self.rect.centerx, self.rect.centery, self.angle)
             enemy_bullets_group.add(new_shoot)
+
+            shoot_song.play()
     
     def update(self):
 
@@ -239,6 +241,8 @@ while True:
                 new_shoot = Bullet(spaceship.rect.centerx, spaceship.rect.centery, spaceship.angle) 
                 bullets_group.add(new_shoot)
                 print('atirou')
+
+                shoot_song.play()
 
                 #recoil
                 force_recoil = 1
