@@ -1,7 +1,9 @@
 import pygame
 import random
 import math
-
+from spaceship import Spaceship
+from bullet import Bullet
+from enemy import Enemy
 FPS = 120
 CLOCK = pygame.time.Clock()
 pygame.init()
@@ -64,134 +66,6 @@ pygame.mixer.init()
 shoot_song = pygame.mixer.Sound('droid-blaster.mp3')
 shoot_song.set_volume(0.4)
 
-class Spaceship(pygame.sprite.Sprite):
-    def __init__(self):
-        super().__init__()
-
-        self.image_orig = pygame.image.load('falcon.png').convert_alpha()
-        self.image_orig = pygame.transform.scale(self.image_orig, (80, 100))
-
-        self.image = self.image_orig
-        self.rect = self.image.get_rect(center=(SCREEN_X // 2, SCREEN_Y // 2))
-
-        self.pos = pygame.Vector2(self.rect.center)
-        self.vel = pygame.Vector2(0, 0)
-        self.aceleration = 0.4
-        self.friction = 0.96
-        self.angle = 0
-        self.life = 10
-        
-
-    def update(self):
-        keys = pygame.key.get_pressed()
-        if keys[pygame.K_w]: self.vel.y -= self.aceleration
-        if keys[pygame.K_s]: self.vel.y += self.aceleration
-        if keys[pygame.K_a]: self.vel.x -= self.aceleration
-        if keys[pygame.K_d]: self.vel.x += self.aceleration
-
-        self.vel *= self.friction
-        self.pos += self.vel
-        self.rect.center = self.pos
-
-        mouse_x, mouse_y = pygame.mouse.get_pos()
-        rel_x, rel_y = mouse_x - self.rect.centerx, mouse_y - self.rect.centery
-        self.angle = math.degrees(math.atan2(-rel_y, rel_x)) # math.atan is the angle in radians. -rel_y (axis y inversion)
-
-        self.image = pygame.transform.rotozoom(self.image_orig, self.angle - 90, 1)
-        self.rect = self.image.get_rect(center=self.pos)
-
-        # without borders
-        if self.rect.left > SCREEN_X: self.pos.x = 0
-        elif self.rect.right < 0: self.pos.x = SCREEN_X
-        if self.rect.top > SCREEN_Y: self.pos.y = 0
-        elif self.rect.bottom < 0: self.pos.y = SCREEN_Y
-
-        if self.life <= 0:
-            self.kill()
-            print('morrido')
-
-class Bullet(pygame.sprite.Sprite):
-    def __init__(self, x, y, angle):
-        super().__init__()
-
-        self.image_orig = pygame.image.load('laser.png').convert_alpha()
-        self.image_orig = pygame.transform.scale(self.image_orig, (50, 60))
-
-        self.image = pygame.transform.rotate(self.image_orig, angle - 90)
-        self.rect = self.image.get_rect(center = (x, y))
-
-        self.pos = pygame.Vector2(x, y)
-        self.speed = 10
-
-        # calculate the direction of the movement based on angle
-        rad = math.radians(angle)
-        self.vel = pygame.Vector2(math.cos(rad) * self.speed, -math.sin(rad) * self.speed)
-
-    def update(self):
-        self.pos += self.vel
-        self.rect.center = self.pos
-
-
-        if not SURFACE.get_rect().collidepoint(self.pos):
-            self.kill()
-
-class Enemy(pygame.sprite.Sprite):
-
-    def __init__(self, target):
-        super().__init__()
-
-        self.target = target
-        
-        self.image_orig = pygame.image.load('destroyer.png').convert_alpha()
-        self.image_orig = pygame.transform.scale(self.image_orig, (80, 100))
-
-        self.image = self.image_orig
-        self.rect = self.image.get_rect(center=(SCREEN_X // 2, SCREEN_Y // 2))
-
-        self.last_shoot = pygame.time.get_ticks()
-        self.shoot_interval = random.randint(500 ,2000)
-
-        self.angle = 0
-
-        self.pos = pygame.Vector2(self.rect.center)
-        self.speed = 0.6
-        self.life = 1
-
-    def shoot(self):
-        now = pygame.time.get_ticks()
-        if now - self.last_shoot > self.shoot_interval:
-            self.last_shoot = now
-            new_shoot = Bullet(self.rect.centerx, self.rect.centery, self.angle)
-            enemy_bullets_group.add(new_shoot)
-
-            shoot_song.play()
-    
-    def update(self):
-
-        # get the player direction
-        direction = pygame.Vector2(self.target.rect.center) - self.pos
-
-        if direction.length() > 0:
-            direction = direction.normalize()
-            self.pos += direction * self.speed
-            
-        self.rect.center = self.pos
-
-        delta_x = self.target.rect.centerx - self.pos.x
-        delta_y = self.target.rect.centery - self.pos.y
-
-        rad = math.atan2(-delta_y, delta_x)
-        self.angle = math.degrees(rad)
-
-        self.image = pygame.transform.rotozoom(self.image_orig, self.angle - 90, 1)
-
-        self.rect = self.image.get_rect(center=self.pos)
-
-        if self.life <= 0:
-            self.kill()
-            print('morreu')
-
-        self.shoot()
 
 all_sprites = pygame.sprite.Group()
 bullets_group = pygame.sprite.Group()
@@ -211,7 +85,7 @@ def spawn_enemies():
     elif border == 2: x, y = -50, random.randint(0, SCREEN_Y)
     else: x, y = SCREEN_X + 50, random.randint(0, SCREEN_Y)
 
-    new_enemy = Enemy(spaceship)
+    new_enemy = Enemy(spaceship, enemy_bullets_group, shoot_song)
     new_enemy.pos = pygame.Vector2(x, y)
     new_enemy.rect.center = new_enemy.pos
 
